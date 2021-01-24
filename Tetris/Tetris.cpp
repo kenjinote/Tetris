@@ -343,7 +343,7 @@ public:
 class Game {
     Mino* mino;
     char minoVx;
-    bool minoDrop;
+    char minoDrop; // 0:なし 1:↓キーによるスピードアップ 2:↑キーによる強制落下
     char minoVr;
     Field* field;
     char fc = 0;
@@ -356,7 +356,7 @@ public:
     Game() {
         mino = makeMino();
         minoVx = 0;
-        minoDrop = false;
+        minoDrop = 0;
         minoVr = 0;
         field = new Field();
         fc = 0;
@@ -405,7 +405,7 @@ public:
         }
     }
     static Mino* makeMino() {
-        return new Mino(5, 1, 0, rand() % 7);
+        return new Mino(5, 2, 0, rand() % 7);
     }
     static bool isMinoMovable(Mino* mino, Field* field) {
         bool ret = true;
@@ -423,27 +423,45 @@ public:
         delete[]blocks;
         return ret;
     }
+    void fix() {
+        Block** blocks = mino->calcBlocks();
+        for (char i = 0; i < 4; i++) {
+            field->putBlock(blocks[i]);
+        }
+        for (char i = 0; i < 4; i++) {
+            delete blocks[i];
+        }
+        delete[]blocks;
+    }
     void proc(HWND hWnd) {
         // 落下
         if (minoDrop || fc % 30 == 0) {
             Mino * futureMino = mino->copy();
-            futureMino->y += 1;
-            if (isMinoMovable(futureMino, field)) {
-                mino->y += 1;
-            }
-            else {
+            if (minoDrop == 2)
+            {
+                do {
+                    futureMino->y += 1;
+                } while (isMinoMovable(futureMino, field));
+                mino->y = futureMino->y - 1;
                 // 接地
-                Block** blocks = mino->calcBlocks();
-                for (char i = 0; i < 4; i++) {
-                    field->putBlock(blocks[i]);
-                }
-                for (char i = 0; i < 4; i++) {
-                    delete blocks[i];
-                }
-                delete[]blocks;
+                fix();
                 // 次のミノ作成
                 delete mino;
                 mino = makeMino();
+            }
+            else
+            {
+                futureMino->y += 1;
+                if (isMinoMovable(futureMino, field)) {
+                    mino->y += 1;
+                }
+                else {
+                    // 接地
+                    fix();
+                    // 次のミノ作成
+                    delete mino;
+                    mino = makeMino();
+                }
             }
             delete futureMino;
             // 消去
@@ -451,7 +469,7 @@ public:
             while ((line = field->findLineFilled()) != -1) {
                 field->cutLine(line);
             }
-            minoDrop = false;
+            minoDrop = 0;
         }
         // 左右移動
         if (minoVx != 0) {
@@ -487,8 +505,11 @@ public:
         case VK_RIGHT:
             minoVx = 1;
             break;
+        case VK_UP:
+            minoDrop = 2;
+            break;
         case VK_DOWN:
-            minoDrop = true;
+            minoDrop = 1;
             break;
         case 'Z':
             minoVr = -1;
