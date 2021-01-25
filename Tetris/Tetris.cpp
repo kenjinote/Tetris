@@ -346,20 +346,15 @@ class Game {
     char minoDrop; // 0:なし 1:↓キーによるスピードアップ 2:↑キーによる強制落下
     char minoVr;
     Field* field;
-    char fc = 0;
+    bool started;
     ID2D1Factory* m_pD2DFactory;
     IWICImagingFactory* m_pWICFactory;
     ID2D1HwndRenderTarget* m_pRenderTarget;
     ID2D1SolidColorBrush* m_pBlackBrush;
     ID2D1Bitmap* m_pBitmap;
+    ULONGLONG dwTime;
 public:
     Game() {
-        mino = makeMino();
-        minoVx = 0;
-        minoDrop = 0;
-        minoVr = 0;
-        field = new Field();
-        fc = 0;
         m_pD2DFactory = nullptr;
         m_pWICFactory = nullptr;
         m_pRenderTarget = nullptr;
@@ -404,6 +399,17 @@ public:
             return;
         }
     }
+    void start() {
+        if (mino) delete mino;
+        mino = makeMino();
+        minoVx = 0;
+        minoDrop = 0;
+        minoVr = 0;
+        if (field) delete field;
+        field = new Field();
+        dwTime = GetTickCount64();
+        started = true;
+    }
     static Mino* makeMino() {
         return new Mino(5, 2, 0, rand() % 7);
     }
@@ -434,8 +440,11 @@ public:
         delete[]blocks;
     }
     void proc(HWND hWnd) {
+
+        if (started == false) return;
+
         // 落下
-        if (minoDrop || fc % 30 == 0) {
+        if (minoDrop || GetTickCount64() - dwTime > 500) {
             Mino * futureMino = mino->copy();
             if (minoDrop == 2)
             {
@@ -470,6 +479,8 @@ public:
                 field->cutLine(line);
             }
             minoDrop = 0;
+
+            dwTime = GetTickCount64();
         }
         // 左右移動
         if (minoVx != 0) {
@@ -494,11 +505,12 @@ public:
 
         // 描画
         draw(hWnd);
-
-        fc++;
     }
     void key(unsigned int vkey) {
         switch (vkey) {
+        case VK_F5:
+            start();
+            break;
         case VK_LEFT:
             minoVx = -1;
             break;
@@ -600,10 +612,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
         }
         else {
-
-            game->proc(hWnd);
             //ゲームの処理
-            //17ミリ秒スレッド待機
+            game->proc(hWnd);
         }
     }
     delete game;
@@ -692,6 +702,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // 選択されたメニューの解析:
             switch (wmId)
             {
+            case ID_START:
+                game->start();
+                break;
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
@@ -708,9 +721,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
         game->resize(LOWORD(lParam), HIWORD(lParam));
-        break;
-    case WM_DISPLAYCHANGE:
-        InvalidateRect(hWnd, 0, 0);
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
