@@ -354,12 +354,20 @@ class Game {
     ID2D1Bitmap* m_pBitmap;
     ULONGLONG dwTime;
 public:
-    Game() {
-        m_pD2DFactory = nullptr;
-        m_pWICFactory = nullptr;
-        m_pRenderTarget = nullptr;
-        m_pBlackBrush = nullptr;
-        m_pBitmap = nullptr;
+    Game()
+        : dwTime(0LL)
+        , m_pD2DFactory(nullptr)
+        , m_pWICFactory(nullptr)
+        , m_pRenderTarget(nullptr) 
+        , m_pBlackBrush(nullptr) 
+        , m_pBitmap(nullptr)
+        , field(nullptr)
+        , mino(nullptr)
+        , minoDrop(0)
+        , minoVr(0)
+        , minoVx(0)
+        , started(false)
+    {
     }
     ~Game()
     {
@@ -717,7 +725,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_KEYDOWN:
-        game->key(wParam);
+        game->key((unsigned int)wParam);
         break;
     case WM_SIZE:
         game->resize(LOWORD(lParam), HIWORD(lParam));
